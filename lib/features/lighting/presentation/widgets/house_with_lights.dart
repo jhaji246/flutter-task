@@ -123,7 +123,7 @@ class _HousePainter extends CustomPainter {
     final double totalLen = metrics.fold(0.0, (p, m) => p + m.length);
     final int numLeds = (totalLen / spacing).floor();
 
-    final bulbRadius = size.shortestSide * 0.018; // much larger bulbs for visibility
+    final bulbRadius = size.shortestSide * 0.010; // smaller bulbs
     double traversed = 0.0;
     int ledIndex = 0;
 
@@ -159,17 +159,24 @@ class _HousePainter extends CustomPainter {
           ..style = PaintingStyle.stroke;
         canvas.drawLine(baseAnchor, tip, connector);
 
-        // Use bright colors or dim for off state
-        final Color displayColor = color.alpha > 0 ? color : const Color(0x44FFFFFF);
+        // Simple bulb rendering for clear animation
+        final Color displayColor = color.alpha > 0 ? color : const Color(0x22FFFFFF);
         
-        // Large solid circle bulb - no blur, just big and solid
+        // Main bulb circle
         final Paint bulbPaint = Paint()..color = displayColor;
-        canvas.drawCircle(tip, bulbRadius * 1.2, bulbPaint);
+        canvas.drawCircle(tip, bulbRadius, bulbPaint);
+        
+        // Simple outline for definition
+        final Paint outline = Paint()
+          ..color = const Color(0xFF333333)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0;
+        canvas.drawCircle(tip, bulbRadius, outline);
 
-        // White highlight for 3D effect - no blur
-        if (color.alpha > 0) {
-          final Paint highlight = Paint()..color = Colors.white.withValues(alpha: 0.3);
-          canvas.drawCircle(tip + Offset(-bulbRadius * 0.3, -bulbRadius * 0.3), bulbRadius * 0.4, highlight);
+        // Small highlight when bulb is on
+        if (color.alpha > 50) {
+          final Paint highlight = Paint()..color = Colors.white.withValues(alpha: 0.6);
+          canvas.drawCircle(tip + Offset(-bulbRadius * 0.3, -bulbRadius * 0.3), bulbRadius * 0.3, highlight);
         }
 
         ledIndex += 1;

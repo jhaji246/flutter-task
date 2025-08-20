@@ -13,12 +13,13 @@ class LightingBloc extends Bloc<LightingEvent, LightingState> {
           effectType: EffectType.chaseFlash,
           tick: 0,
           isAnimating: true,
-          speedMs: 120,
+          speedMs: 80, // Optimized for smooth 60fps-like animation
         )) {
     on<StartAnimation>(_onStart);
     on<StopAnimation>(_onStop);
     on<ChangeEffect>(_onChangeEffect);
     on<ChangeSpeed>(_onChangeSpeed);
+    on<_Tick>(_onTick);
 
     _startTicker();
   }
@@ -50,6 +51,10 @@ class LightingBloc extends Bloc<LightingEvent, LightingState> {
   void _onChangeSpeed(ChangeSpeed event, Emitter<LightingState> emit) {
     emit(state.copyWith(speedMs: event.speedMs));
     _startTicker();
+  }
+
+  void _onTick(_Tick event, Emitter<LightingState> emit) {
+    emit(state.copyWith()); // This will increment tick by 1
   }
 
   @override

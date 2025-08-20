@@ -1,4 +1,5 @@
 
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 enum EffectType {
@@ -26,27 +27,20 @@ class EffectAlgorithms {
     required int tick,
     required int numLeds,
   }) {
-    // Chase Flash: moving segments of bright white lights with flash effect
-    const int groupSize = 5; // size of each chasing group
-    const int numGroups = 3; // number of groups chasing around
-    final int spacing = numLeds ~/ numGroups; // space between groups
+    // 31 - Chase Flash: Simple moving white light chase
+    const int chaseLength = 5; // chase tail length
+    final int head = tick % numLeds; // position of brightest light
     
-    // Flash every other tick for strobe effect
-    final bool isFlashTick = (tick % 2) == 0;
+    // Calculate distance from the chase head
+    int distance = (ledIndex - head + numLeds) % numLeds;
     
-    for (int group = 0; group < numGroups; group++) {
-      final int groupStart = (tick + group * spacing) % numLeds;
-      
-      // Check if this LED is in the current group
-      for (int i = 0; i < groupSize; i++) {
-        if ((groupStart + i) % numLeds == ledIndex) {
-          // Bright white with flash strobe effect
-          return isFlashTick ? const Color(0xFFFFFFFF) : const Color(0xFFE6E6E6);
-        }
-      }
+    if (distance < chaseLength) {
+      // Create brightness gradient from head to tail
+      final double brightness = 1.0 - (distance / chaseLength);
+      return Colors.white.withValues(alpha: brightness);
     }
     
-    return const Color(0x00000000); // fully off for others
+    return const Color(0x00000000); // off
   }
 
   static Color _colorfulColor({
@@ -54,19 +48,19 @@ class EffectAlgorithms {
     required int tick,
     required int numLeds,
   }) {
-    // Colourful effect: RGBY repeating pattern with alternating blink
+    // 32 - Colourful: Simple alternating color pattern
     const List<Color> palette = [
-      Color(0xFFFF1515), // bright red
-      Color(0xFF15FF15), // bright green  
-      Color(0xFF1515FF), // bright blue
-      Color(0xFFFFFF15), // bright yellow
+      Color(0xFFFF0000), // red
+      Color(0xFF00FF00), // green  
+      Color(0xFF0000FF), // blue
+      Color(0xFFFFFF00), // yellow
     ];
 
-    // Each LED has a fixed color based on its position
+    // Each LED gets a fixed color based on position
     final Color baseColor = palette[ledIndex % palette.length];
     
-    // Simple alternating blink: even/odd LEDs alternate every few ticks
-    final int phase = (tick ~/ 2) % 2; // adjust blink speed
+    // Simple alternating blink pattern
+    final int phase = (tick ~/ 3) % 2; // blink every 3 ticks
     final bool isOn = (ledIndex % 2) == phase;
     
     return isOn ? baseColor : const Color(0x00000000);
