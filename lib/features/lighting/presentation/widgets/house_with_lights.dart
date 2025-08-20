@@ -123,7 +123,7 @@ class _HousePainter extends CustomPainter {
     final double totalLen = metrics.fold(0.0, (p, m) => p + m.length);
     final int numLeds = (totalLen / spacing).floor();
 
-    final bulbRadius = size.shortestSide * 0.012; // larger bulbs
+    final bulbRadius = size.shortestSide * 0.018; // much larger bulbs for visibility
     double traversed = 0.0;
     int ledIndex = 0;
 
@@ -150,38 +150,26 @@ class _HousePainter extends CustomPainter {
 
         // Draw all bulbs - both on and off for clear strand visibility
         // connector from eave to bulb base - hang directly from fascia
-        final Offset baseCenter = baseAnchor + nUnit * (bulbRadius * 0.4);
-        final Offset baseLeft = baseCenter - tUnit * (bulbRadius * 1.0);
-        final Offset baseRight = baseCenter + tUnit * (bulbRadius * 1.0);
-        final Offset tip = baseAnchor + nUnit * (bulbRadius * 1.8);
+        final Offset baseCenter = baseAnchor + nUnit * (bulbRadius * 0.3);
+        final Offset tip = baseAnchor + nUnit * (bulbRadius * 1.5);
 
         final Paint connector = Paint()
           ..color = const Color(0xFF333333)
-          ..strokeWidth = size.shortestSide * 0.004
+          ..strokeWidth = size.shortestSide * 0.006
           ..style = PaintingStyle.stroke;
-        canvas.drawLine(baseAnchor, baseCenter, connector);
+        canvas.drawLine(baseAnchor, tip, connector);
 
         // Use bright colors or dim for off state
-        final Color displayColor = color.alpha > 0 ? color : const Color(0x33FFFFFF);
+        final Color displayColor = color.alpha > 0 ? color : const Color(0x44FFFFFF);
         
-        // Triangle body - larger and more visible
+        // Large solid circle bulb - no blur, just big and solid
         final Paint bulbPaint = Paint()..color = displayColor;
-        final Path tri = Path()
-          ..moveTo(baseLeft.dx, baseLeft.dy)
-          ..lineTo(baseRight.dx, baseRight.dy)
-          ..lineTo(tip.dx, tip.dy)
-          ..close();
-        canvas.drawPath(tri, bulbPaint);
+        canvas.drawCircle(tip, bulbRadius * 1.2, bulbPaint);
 
-        // Round head for visual pop - bigger
-        canvas.drawCircle(tip, bulbRadius * 0.9, bulbPaint);
-
-        // Strong glow for active bulbs only
+        // White highlight for 3D effect - no blur
         if (color.alpha > 0) {
-          final Paint glow = Paint()
-            ..color = color.withValues(alpha: 0.6)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-          canvas.drawCircle(tip, bulbRadius * 3.5, glow);
+          final Paint highlight = Paint()..color = Colors.white.withValues(alpha: 0.3);
+          canvas.drawCircle(tip + Offset(-bulbRadius * 0.3, -bulbRadius * 0.3), bulbRadius * 0.4, highlight);
         }
 
         ledIndex += 1;
