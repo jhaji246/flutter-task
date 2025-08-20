@@ -68,7 +68,7 @@ class _HousePainter extends CustomPainter {
 
     // Sample points along the roof where bulbs will be placed
     final metrics = roof.computeMetrics().toList();
-    final double spacing = size.width * 0.022; // visual spacing
+    final double spacing = size.width * 0.020; // slightly denser spacing
     final double totalLen = metrics.fold(0.0, (p, m) => p + m.length);
     final int numLeds = (totalLen / spacing).floor();
 
@@ -100,10 +100,17 @@ class _HousePainter extends CustomPainter {
         // Draw a small dangling triangular bulb oriented with roof normal
         final paint = Paint()..color = color;
 
-        final Offset baseCenter = baseAnchor + nUnit * (bulbRadius * 0.4);
-        final Offset baseLeft = baseCenter - tUnit * bulbRadius;
-        final Offset baseRight = baseCenter + tUnit * bulbRadius;
-        final Offset tip = baseAnchor + nUnit * (bulbRadius * 2.2);
+        // connector from eave to bulb base
+        final Offset baseCenter = baseAnchor + nUnit * (bulbRadius * 1.0);
+        final Offset baseLeft = baseCenter - tUnit * (bulbRadius * 0.9);
+        final Offset baseRight = baseCenter + tUnit * (bulbRadius * 0.9);
+        final Offset tip = baseAnchor + nUnit * (bulbRadius * 2.3);
+
+        final Paint connector = Paint()
+          ..color = const Color(0xFF444444)
+          ..strokeWidth = size.shortestSide * 0.003
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(baseAnchor, baseCenter, connector);
 
         final Path tri = Path()
           ..moveTo(baseLeft.dx, baseLeft.dy)
