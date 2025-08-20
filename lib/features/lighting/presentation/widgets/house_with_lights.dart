@@ -1,9 +1,11 @@
 import 'dart:ui' as ui;
+import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_task/features/lighting/domain/effect_type.dart';
 
-class HouseWithLights extends StatelessWidget {
+class HouseWithLights extends StatefulWidget {
   const HouseWithLights({super.key, required this.effectType, required this.tick, this.imageAsset = 'assets/house.png'});
 
   final EffectType effectType;
@@ -11,68 +13,117 @@ class HouseWithLights extends StatelessWidget {
   final String imageAsset;
 
   @override
+  State<HouseWithLights> createState() => _HouseWithLightsState();
+}
+
+class _HouseWithLightsState extends State<HouseWithLights> {
+  ui.Image? _image;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
+
+  @override
+  void didUpdateWidget(covariant HouseWithLights oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageAsset != widget.imageAsset) {
+      _loadImage();
+    }
+  }
+
+  Future<void> _loadImage() async {
+    try {
+      final data = await rootBundle.load(widget.imageAsset);
+      final bytes = data.buffer.asUint8List();
+      final completer = Completer<ui.Image>();
+      ui.decodeImageFromList(bytes, (img) => completer.complete(img));
+      final img = await completer.future;
+      if (mounted) {
+        setState(() {
+          _image = img;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _image = null);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            // House background image (user-provided asset). If missing, nothing will show.
-            Image.asset(
-              imageAsset,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-            ),
-            CustomPaint(
-              painter: _HousePainter(effectType: effectType, tick: tick),
-              child: const SizedBox.expand(),
-            ),
-          ],
-        );
-      },
+    return CustomPaint(
+      painter: _HousePainter(effectType: widget.effectType, tick: widget.tick, image: _image),
+      child: const SizedBox.expand(),
     );
   }
 }
 
 class _HousePainter extends CustomPainter {
-  _HousePainter({required this.effectType, required this.tick});
+  _HousePainter({required this.effectType, required this.tick, required this.image});
 
   final EffectType effectType;
   final int tick;
+  final ui.Image? image;
 
   @override
   void paint(Canvas canvas, Size size) {
-    // If the house image is used as background, we only draw the LED stroke and bulbs.
-    // Otherwise, the area is empty and you will only see LEDs.
+    // Draw the background house image with BoxFit.contain and compute its rect.
+    Rect destRect = Offset.zero & size;
+    if (image != null) {
+      final fitted = applyBoxFit(BoxFit.contain, Size(image!.width.toDouble(), image!.height.toDouble()), size);
+      final outputSize = fitted.destination;
+      final dx = (size.width - outputSize.width) / 2;
+      final dy = (size.height - outputSize.height) / 2;
+      destRect = Rect.fromLTWH(dx, dy, outputSize.width, outputSize.height);
+      paintImage(canvas: canvas, rect: destRect, image: image!, fit: BoxFit.contain, filterQuality: FilterQuality.high);
+      
 
-    // Normalized path traced to match the provided house image's eaves.
-    final List<Offset> points = [
-      const Offset(0.140, 0.355), // far left start of left eave
-      const Offset(0.425, 0.355), // end of left eave
-      const Offset(0.545, 0.305), // small ramp
-      const Offset(0.610, 0.265), // up to apex
-      const Offset(0.695, 0.335), // down right gable
-      const Offset(0.855, 0.335), // short right eave
-    ].map((e) => Offset(e.dx * size.width, e.dy * size.height)).toList();
-
-    final roof = Path()..moveTo(points.first.dx, points.first.dy);
-    for (int i = 1; i < points.length; i++) {
-      roof.lineTo(points[i].dx, points[i].dy);
     }
 
-    final roofStroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = size.shortestSide * 0.008
-      ..color = const Color(0xFF2D2D2D);
-    canvas.drawPath(roof, roofStroke);
+    // Complete roof outline following the actual house fascia edge precisely
+    final List<Offset> roofPoints = [
+      // Left gable start (far left) - adjust to roof edge
+      const Offset(0.142, 0.355),
+      // Horizontal section under left roof - balcony area
+      const Offset(0.305, 0.355),
+      // Small gable up - adjust peak position
+      const Offset(0.340, 0.285),
+      // Small gable down - adjust to eave level
+      const Offset(0.375, 0.355),
+      // Long horizontal eave across middle
+      const Offset(0.590, 0.355),
+      // Up to main gable start
+      const Offset(0.635, 0.305),
+      // Main gable peak - adjust height
+      const Offset(0.700, 0.245),
+      // Down right side of main gable
+      const Offset(0.765, 0.305),
+      // Continue horizontal eave right
+      const Offset(0.855, 0.355),
+      // Right eave end
+      const Offset(0.915, 0.355),
+    ].map((e) => Offset(destRect.left + e.dx * destRect.width, destRect.top + e.dy * destRect.height)).toList();
+
+    final roof = Path()..moveTo(roofPoints.first.dx, roofPoints.first.dy);
+    for (int i = 1; i < roofPoints.length; i++) {
+      roof.lineTo(roofPoints[i].dx, roofPoints[i].dy);
+    }
+
+    // Optional: debug stroke for alignment (commented out in prod)
+    // final roofStroke = Paint()
+    //   ..style = PaintingStyle.stroke
+    //   ..strokeWidth = size.shortestSide * 0.004
+    //   ..color = const Color(0x88FF0000);
+    // canvas.drawPath(roof, roofStroke);
 
     // Sample points along the roof where bulbs will be placed
     final metrics = roof.computeMetrics().toList();
-    final double spacing = size.width * 0.018; // denser spacing for a fuller strand
+    final double spacing = destRect.width * 0.020; // wider spacing for better visibility
     final double totalLen = metrics.fold(0.0, (p, m) => p + m.length);
     final int numLeds = (totalLen / spacing).floor();
 
-    final bulbRadius = size.shortestSide * 0.008;
+    final bulbRadius = size.shortestSide * 0.012; // larger bulbs
     double traversed = 0.0;
     int ledIndex = 0;
 
@@ -97,33 +148,41 @@ class _HousePainter extends CustomPainter {
           numLeds: numLeds,
         );
 
-        // Draw a small dangling triangular bulb oriented with roof normal
-        final paint = Paint()..color = color;
-
-        // connector from eave to bulb base
-        final Offset baseCenter = baseAnchor + nUnit * (bulbRadius * 0.5);
-        final Offset baseLeft = baseCenter - tUnit * (bulbRadius * 0.7);
-        final Offset baseRight = baseCenter + tUnit * (bulbRadius * 0.7);
-        final Offset tip = baseAnchor + nUnit * (bulbRadius * 1.4);
+        // Draw all bulbs - both on and off for clear strand visibility
+        // connector from eave to bulb base - hang directly from fascia
+        final Offset baseCenter = baseAnchor + nUnit * (bulbRadius * 0.4);
+        final Offset baseLeft = baseCenter - tUnit * (bulbRadius * 1.0);
+        final Offset baseRight = baseCenter + tUnit * (bulbRadius * 1.0);
+        final Offset tip = baseAnchor + nUnit * (bulbRadius * 1.8);
 
         final Paint connector = Paint()
-          ..color = const Color(0xFF444444)
-          ..strokeWidth = size.shortestSide * 0.0024
+          ..color = const Color(0xFF333333)
+          ..strokeWidth = size.shortestSide * 0.004
           ..style = PaintingStyle.stroke;
         canvas.drawLine(baseAnchor, baseCenter, connector);
 
+        // Use bright colors or dim for off state
+        final Color displayColor = color.alpha > 0 ? color : const Color(0x33FFFFFF);
+        
+        // Triangle body - larger and more visible
+        final Paint bulbPaint = Paint()..color = displayColor;
         final Path tri = Path()
           ..moveTo(baseLeft.dx, baseLeft.dy)
           ..lineTo(baseRight.dx, baseRight.dy)
           ..lineTo(tip.dx, tip.dy)
           ..close();
-        canvas.drawPath(tri, paint);
+        canvas.drawPath(tri, bulbPaint);
 
-        // Small glow under the bulb
-        final glow = Paint()
-          ..color = color.withValues(alpha: 0.25)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-        canvas.drawCircle(tip, bulbRadius * 1.2, glow);
+        // Round head for visual pop - bigger
+        canvas.drawCircle(tip, bulbRadius * 0.9, bulbPaint);
+
+        // Strong glow for active bulbs only
+        if (color.alpha > 0) {
+          final Paint glow = Paint()
+            ..color = color.withValues(alpha: 0.6)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+          canvas.drawCircle(tip, bulbRadius * 3.5, glow);
+        }
 
         ledIndex += 1;
         traversed += spacing;
