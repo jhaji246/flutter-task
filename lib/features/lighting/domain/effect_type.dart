@@ -49,22 +49,21 @@ class EffectAlgorithms {
     required int tick,
     required int numLeds,
   }) {
-    // Fixed repeating palette and 4-phase blink like reference
+    // Match reference: repeating R-G-B-Y order, alternate parity blink on/off
     const palette = <Color>[
       Color(0xFFE53935), // red
-      Color(0xFF43A047), // green
       Color(0xFF1E88E5), // blue
+      Color(0xFF43A047), // green
       Color(0xFFFDD835), // yellow
     ];
 
-    final Color base = palette[ledIndex % palette.length];
+    final Color base = palette[ledIndex % 4];
 
-    // 4-phase alternating groups for a strong synchronized blink
-    final int phase = (tick ~/ 2) % 4; // adjust tempo via slider or divisor
-    final int group = ledIndex % 4;
-    final bool isOn = group == phase || (group + 2) % 4 == phase; // two opposite groups on together
+    // Alternate even/odd bulbs; slightly slower for clarity
+    final int phase = (tick ~/ 3) % 2; // tune via slider
+    final bool isOn = (ledIndex % 2) == phase;
 
-    return isOn ? base : base.withValues(alpha: 0.12);
+    return isOn ? base : const Color(0x00000000); // fully off like sample
   }
 }
 

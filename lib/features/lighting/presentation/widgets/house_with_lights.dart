@@ -68,7 +68,7 @@ class _HousePainter extends CustomPainter {
 
     // Sample points along the roof where bulbs will be placed
     final metrics = roof.computeMetrics().toList();
-    final double spacing = size.width * 0.020; // slightly denser spacing
+    final double spacing = size.width * 0.018; // denser spacing for a fuller strand
     final double totalLen = metrics.fold(0.0, (p, m) => p + m.length);
     final int numLeds = (totalLen / spacing).floor();
 
@@ -101,14 +101,14 @@ class _HousePainter extends CustomPainter {
         final paint = Paint()..color = color;
 
         // connector from eave to bulb base
-        final Offset baseCenter = baseAnchor + nUnit * (bulbRadius * 1.0);
-        final Offset baseLeft = baseCenter - tUnit * (bulbRadius * 0.9);
-        final Offset baseRight = baseCenter + tUnit * (bulbRadius * 0.9);
-        final Offset tip = baseAnchor + nUnit * (bulbRadius * 2.3);
+        final Offset baseCenter = baseAnchor + nUnit * (bulbRadius * 0.5);
+        final Offset baseLeft = baseCenter - tUnit * (bulbRadius * 0.7);
+        final Offset baseRight = baseCenter + tUnit * (bulbRadius * 0.7);
+        final Offset tip = baseAnchor + nUnit * (bulbRadius * 1.4);
 
         final Paint connector = Paint()
           ..color = const Color(0xFF444444)
-          ..strokeWidth = size.shortestSide * 0.003
+          ..strokeWidth = size.shortestSide * 0.0024
           ..style = PaintingStyle.stroke;
         canvas.drawLine(baseAnchor, baseCenter, connector);
 
@@ -123,7 +123,7 @@ class _HousePainter extends CustomPainter {
         final glow = Paint()
           ..color = color.withValues(alpha: 0.25)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-        canvas.drawCircle(tip, bulbRadius * 1.6, glow);
+        canvas.drawCircle(tip, bulbRadius * 1.2, glow);
 
         ledIndex += 1;
         traversed += spacing;
